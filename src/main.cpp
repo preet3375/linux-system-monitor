@@ -13,6 +13,13 @@ int main(){
         return 1;
     }
 
+    ifstream inputfile2("/proc/stat");
+
+    if (!inputfile2) {
+        cout << "Failed to open /proc/stat" << endl;
+        return 1;
+    }
+
     string s;
 
     long long totalMemory = 0;
@@ -51,6 +58,27 @@ int main(){
     cout << "Available Memory: " << availableMemory << " kB" << endl;
     cout << "Used Memory: " << used << " kB" << endl;
     cout << "Memory Usage: " << usage << "%" << endl;
+
+    long long user, nice, system, idle, iowait, irq, softirq, steal, guest, guest_nice;
+    string s2;
+    while(getline(inputfile2,s2)){
+        if(s2.find("cpu ") != string::npos){
+            stringstream str2(s2);
+            string label;
+
+            
+            str2 >> label >> user >> nice >> system >> idle >> iowait >> irq >> softirq >> steal >> guest >> guest_nice;
+            break;
+        }
+    }
+
+    long long nonIdle = user + nice + system + irq + softirq + steal;
+    long long idleTime = idle + iowait;
+    long long totalTime = nonIdle + idleTime;
+
+    long double cpuUsage = ((long double)(nonIdle) / totalTime) * 100;
+
+    cout << "CPU Usage: " << cpuUsage << "%" << endl;
 
     return 0;
 }
