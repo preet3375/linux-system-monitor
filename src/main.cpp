@@ -1,84 +1,55 @@
+#include "cpu.h"
+#include "memory.h"
 #include<iostream>
-#include<fstream>
-#include<string>
-#include<sstream>
+#include<thread>
+#include<chrono>
+#include<iomanip>
 using namespace std;
 
 int main(){
 
-    ifstream inputfile("/proc/meminfo");
+    CpuStats first = getCpuStats();
 
-    if (!inputfile) {
-        cout << "Failed to open /proc/meminfo" << endl;
-        return 1;
+    while(true){
+        this_thread::sleep_for(chrono::seconds(1));
+
+        CpuStats second = getCpuStats();
+        MemoryStats memory = getMemoryStats();
+
+
+        long long memoryUsed = memory.total - memory.available;
+        long double memoryUsage = ((long double)memoryUsed/memory.total)*100; 
+
+
+        long long firstNonIdle = first.user + first.nice + first.system + first.irq + first.softirq + first.steal;
+        long long firstIdleTime = first.idle + first.iowait;
+        long long firstTotalTime = firstNonIdle + firstIdleTime;
+
+        long long secondNonIdle = second.user + second.nice + second.system + second.irq + second.softirq + second.steal;
+        long long secondIdleTime = second.idle + second.iowait;
+        long long secondTotalTime = secondNonIdle + secondIdleTime;
+
+        long long totalDelta = secondTotalTime - firstTotalTime;
+        long long idleDelta = secondIdleTime - firstIdleTime;
+
+        long double cpuUsage = ((long double)(totalDelta - idleDelta)/totalDelta) * 100;
+
+
+        cout << "\033[2J\033[H";
+        
+        cout << "========================================" << endl;
+        cout << "        LINUX SYSTEM MONITOR            " << endl;
+        cout << "========================================" << endl;
+
+        cout << "CPU Usage        : " << fixed << setprecision(2) << cpuUsage << "%" << endl;
+        cout << "Memory Usage     : " << fixed << setprecision(2) << memoryUsage << "%" << endl;
+        cout << "Available Memory : " << memory.available << " kB" << endl;
+        cout << "Used Memory      : " << memoryUsed << " kB" << endl;
+        cout << "Total Memory     : " << memory.total << " kB" << endl;
+
+        cout << "========================================" << endl;
+        first = second;
     }
-
-    ifstream inputfile2("/proc/stat");
-
-    if (!inputfile2) {
-        cout << "Failed to open /proc/stat" << endl;
-        return 1;
-    }
-
-    string s;
-
-    long long totalMemory = 0;
-    long long availableMemory = 0;
-
-    while(getline(inputfile, s)){
-        if(s.find("MemTotal") != string::npos){
-            stringstream str(s);
-
-            string label;
-            long long value;
-            string unit;
-
-            str >> label >> value >> unit;
-
-            totalMemory = value;
-        }
-
-        if(s.find("MemAvailable") != string::npos){
-            stringstream str(s);
-
-            string label;
-            long long value;
-            string unit;
-
-            str >> label >> value >> unit;
-
-            availableMemory = value;
-        }
-    }
-
-    long long used = totalMemory - availableMemory;
-    long double usage = ((long double)used/totalMemory)*100; 
-
-    cout << "Total Memory: " << totalMemory << " kB" << endl;
-    cout << "Available Memory: " << availableMemory << " kB" << endl;
-    cout << "Used Memory: " << used << " kB" << endl;
-    cout << "Memory Usage: " << usage << "%" << endl;
-
-    long long user, nice, system, idle, iowait, irq, softirq, steal, guest, guest_nice;
-    string s2;
-    while(getline(inputfile2,s2)){
-        if(s2.find("cpu ") != string::npos){
-            stringstream str2(s2);
-            string label;
-
-            
-            str2 >> label >> user >> nice >> system >> idle >> iowait >> irq >> softirq >> steal >> guest >> guest_nice;
-            break;
-        }
-    }
-
-    long long nonIdle = user + nice + system + irq + softirq + steal;
-    long long idleTime = idle + iowait;
-    long long totalTime = nonIdle + idleTime;
-
-    long double cpuUsage = ((long double)(nonIdle) / totalTime) * 100;
-
-    cout << "CPU Usage: " << cpuUsage << "%" << endl;
 
     return 0;
 }
