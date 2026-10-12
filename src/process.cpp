@@ -4,8 +4,6 @@
 #include<string>
 #include<fstream>
 #include<sstream>
-#include<thread>
-#include<chrono>
 
 using namespace std;
 
@@ -15,27 +13,39 @@ ProcessCpuStat getProcessCpuStat(long long pid){
     ifstream inputfile(path);
 
     if(!inputfile){
-        return {0,0};
+        return {0,0,'?'};
     }
 
     string line;
-    getline(inputfile,line);
+    if(!getline(inputfile,line)){
+        return {0,0,'?'};
+    }
 
     size_t closingParen = line.rfind(')');
+
+    if(closingParen == string::npos){
+        return {0,0,'?'};
+    }
 
     string remaining = line.substr(closingParen + 2);
 
     stringstream str(remaining);
 
-    string state;
+    char state;
     str>>state;
+
+    if(!(str >> state)){
+        return {0, 0, '?'};
+    }
 
     long long value;
 
     ProcessCpuStat p1{};
 
     for(int i=4;i<=15;i++){
-        str>>value;
+        if(!(str >> value)){
+            return {0, 0, '?'};
+        }
 
         if(i==14){
             p1.utime=value;
@@ -44,6 +54,8 @@ ProcessCpuStat getProcessCpuStat(long long pid){
             p1.stime=value;
         }
     }
+    p1.state = state;
+
     return p1;
 }
 
@@ -94,34 +106,10 @@ Process getProcessInfo(long long pid) {
     p.pid = pid;
     p.name = processName;
     p.memory = memory;
+    p.ppid = ppid;
+
+    ProcessCpuStat stat = getProcessCpuStat(pid);
+    p.state = stat.state;
 
     return p;
 }
-
-// int main(){
-
-//     ProcessCpuStat p = getProcessCpuStat(1);
-//     CpuStats first = getCpuStats();
-
-//     this_thread::sleep_for(chrono::seconds(1));
-
-//     ProcessCpuStat p2 = getProcessCpuStat(1);
-//     CpuStats second = getCpuStats();
-
-//     long long firstNonIdle = first.user + first.nice + first.system + first.irq + first.softirq + first.steal;
-//     long long firstIdleTime = first.idle + first.iowait;
-//     long long firstTotalTime = firstNonIdle + firstIdleTime;
-
-//     long long secondNonIdle = second.user + second.nice + second.system + second.irq + second.softirq + second.steal;
-//     long long secondIdleTime = second.idle + second.iowait;
-//     long long secondTotalTime = secondNonIdle + secondIdleTime;
-        
-//     long long totalDelta = secondTotalTime - firstTotalTime;
-
-//     long double cpuUsage = calculateProcessCpuUsage(p,p2,totalDelta);
-//     cout << "CPU Usage : " << cpuUsage <<"%"<<endl; 
-
-
-
-//     return 0;
-// }

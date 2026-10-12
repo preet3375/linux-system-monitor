@@ -117,7 +117,10 @@ int main(){
                 long long processDelta =
                     (secondStat.utime + secondStat.stime) -
                     (firstStat.utime + firstStat.stime);
-
+                    
+                if(processDelta < 0 || totalDelta <= 0){
+                    continue;
+                }
                 if(totalDelta > 0){
                     long double processCpuUsage =
                         ((long double)processDelta / totalDelta) * 100;
@@ -129,27 +132,6 @@ int main(){
                     }
                 }
             }
-
-            // for(const auto& previous : firstProcessStats){
-
-            //     if(previous.first == pid){
-            //         ProcessCpuStat firstStat = previous.second;
-
-            //         long long cpuCount = sysconf(_SC_NPROCESSORS_ONLN);
-            //         long double processCpuUsage = ((long double)(secondStat.utime + secondStat.stime - 
-            //             (firstStat.utime + firstStat.stime))/totalDelta)*100; // *cpuCount
-
-            //         for(auto& process : processes){
-            //             if(process.pid == pid){
-            //                 process.cpu = processCpuUsage;
-            //                 break;
-            //             }
-            //         }
-            //         break;
-            //     }
-
-            // }
-
         }
 
         sort(processes.begin(), processes.end(), [](const Process& a, const Process& b) {
@@ -174,6 +156,8 @@ int main(){
 
         cout << left
              << setw(10) << "PID"
+             << setw(10) << "PPID"
+             << setw(8) << "STATE"
              << setw(40) << "NAME"
              << setw(15) << "CPU"
              << setw(15) << "MEMORY"
@@ -187,6 +171,8 @@ int main(){
 
             cout << left
                  << setw(10) << process.pid
+                 << setw(10) << process.ppid
+                 << setw(8) << process.state
                  << setw(40) << process.name    
                  << fixed << setprecision(2)
                  << setw(15) << (to_string((double)process.cpu) + " %")

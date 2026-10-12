@@ -4,6 +4,7 @@
 struct ProcessCpuStat{
     long long utime;
     long long stime;
+    char state;
 };
 
 struct Process {
@@ -11,6 +12,8 @@ struct Process {
     std::string name;
     long long memory;
     long double cpu;
+    long long ppid;
+    char state;
 };
 
 ProcessCpuStat getProcessCpuStat(long long pid);
