@@ -2,3 +2,4 @@ monitor
 *.o
 build/
 .vscode/
+a.out

@@ -21,8 +21,7 @@ void handleSignal(int signal){
     running = 0;
 }
 
-int main(){
-    cout << "\033[?1049h";
+int main(int argc, char* argv[]){
 
     CpuStats first = getCpuStats();
 
@@ -49,6 +48,28 @@ int main(){
         previousStats[process.first] = process.second;
     }
 
+    bool sortByMemory = false;
+
+    if(argc > 2){
+        cerr << "Usage: " << argv[0] << " [cpu|memory]\n";
+        cout << "\033[?1049l" << flush;
+        return 1;
+    }
+
+    if(argc == 2){
+        string mode = argv[1];
+
+        if(mode == "memory"){
+            sortByMemory = true;
+        }
+        else if(mode != "cpu"){
+            cerr << "Usage: " << argv[0] << " [cpu|memory]\n";
+            cout << "\033[?1049l" << flush;
+            return 1;
+        }
+    }
+    cout << "\033[?1049h";
+
     signal(SIGINT, handleSignal);
 
     while(running){
@@ -61,7 +82,11 @@ int main(){
         MemoryStats memory = getMemoryStats();
 
         long long memoryUsed = memory.total - memory.available;
-        long double memoryUsage = ((long double)memoryUsed / memory.total) * 100;
+        long double memoryUsage = 0.0L;
+
+        if(memory.total > 0){
+            memoryUsage = ((long double)memoryUsed / memory.total) * 100.0L;
+        }
 
         long long firstNonIdle = first.user + first.nice + first.system + first.irq + first.softirq + first.steal;
         long long firstIdleTime = first.idle + first.iowait;
@@ -74,7 +99,11 @@ int main(){
         long long totalDelta = secondTotalTime - firstTotalTime;
         long long idleDelta = secondIdleTime - firstIdleTime;
 
-        long double cpuUsage = ((long double)(totalDelta - idleDelta) / totalDelta) * 100;
+        long double cpuUsage = 0.0L;
+
+        if(totalDelta > 0){
+            cpuUsage = ((long double)(totalDelta - idleDelta) / totalDelta) * 100.0L;
+        }
 
         vector<Process> processes;
 
@@ -89,6 +118,10 @@ int main(){
                     long long pid = stoll(name);
 
                     Process p = getProcessInfo(pid);
+                    
+                    if(p.pid == 0){
+                        continue;
+                    }
 
                     processes.push_back(p);
 
@@ -117,7 +150,7 @@ int main(){
                 long long processDelta =
                     (secondStat.utime + secondStat.stime) -
                     (firstStat.utime + firstStat.stime);
-                    
+
                 if(processDelta < 0 || totalDelta <= 0){
                     continue;
                 }
@@ -134,7 +167,10 @@ int main(){
             }
         }
 
-        sort(processes.begin(), processes.end(), [](const Process& a, const Process& b) {
+        sort(processes.begin(), processes.end(), [sortByMemory](const Process& a, const Process& b) {
+            if(sortByMemory){
+                return a.memory > b.memory;
+            }
             return a.cpu > b.cpu;
         });
 
@@ -151,7 +187,7 @@ int main(){
         cout << "Total Memory     : " << memory.total << " kB" << endl;
 
         cout << "========================================" << endl;
-        cout << "Top Processes by CPU" << endl;
+        cout << (sortByMemory ? "Top Processes by Memory" : "Top Processes by CPU") << endl;
         cout << "========================================" << endl;
 
         cout << left
